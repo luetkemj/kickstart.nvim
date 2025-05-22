@@ -1,5 +1,9 @@
 # kickstart.nvim
 
+NOTE: Don't install the vue language server - it will duplicate error messages
+You may need to install some stuff globally, check the reddit thread that is 
+linked in init.lua before the lsp section
+
 ## Introduction
 
 A starting point for Neovim that is:
