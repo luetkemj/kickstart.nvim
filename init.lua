@@ -675,6 +675,119 @@ require('lazy').setup({
       --  So, we create new capabilities with blink.cmp, and then broadcast that to the servers.
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
+      local lspconfig = require 'lspconfig'
+      local util = require 'lspconfig.util'
+
+      local function get_tsdk(root_dir)
+        local tsdk = util.path.join(root_dir, 'node_modules', 'typescript', 'lib')
+        if util.path.exists(tsdk) then
+          return tsdk
+        end
+        return ''
+      end
+
+      -- lspconfig.vue_ls.setup {
+      --   cmd = { 'npx', '--no-install', '@vue/language-server', '--stdio' },
+      --   filetypes = { 'vue' },
+      --   root_dir = util.root_pattern 'package.json',
+      --   init_options = {
+      --     typescript = {
+      --       tsdk = '',
+      --     },
+      --     takeOverMode = true, -- optional
+      --   },
+      --   on_new_config = function(new_config, new_root_dir)
+      --     local tsdk = get_tsdk(new_root_dir)
+      --     if tsdk ~= '' then
+      --       new_config.init_options.typescript.tsdk = tsdk
+      --     else
+      --       vim.notify('[vue_ls] Warning: Could not find local TypeScript SDK in ' .. new_root_dir, vim.log.levels.WARN)
+      --       -- fallback behavior: leave tsdk empty or consider global fallback here if you want
+      --     end
+      --   end,
+      -- }
+
+      lspconfig.volar.setup {
+        -- NOTE: Uncomment to enable volar in file types other than vue.
+        -- (Similar to Takeover Mode)
+
+        -- filetypes = { "vue", "javascript", "typescript", "javascriptreact", "typescriptreact", "json" },
+
+        -- NOTE: Uncomment to restrict Volar to only Vue/Nuxt projects. This will enable Volar to work alongside other language servers (tsserver).
+
+        -- root_dir = require("lspconfig").util.root_pattern(
+        --   "vue.config.js",
+        --   "vue.config.ts",
+        --   "nuxt.config.js",
+        --   "nuxt.config.ts"
+        -- ),
+        init_options = {
+          vue = {
+            hybridMode = false,
+          },
+          -- NOTE: This might not be needed. Uncomment if you encounter issues.
+
+          -- typescript = {
+          --   tsdk = vim.fn.getcwd() .. "/node_modules/typescript/lib",
+          -- },
+        },
+        settings = {
+          typescript = {
+            inlayHints = {
+              enumMemberValues = {
+                enabled = true,
+              },
+              functionLikeReturnTypes = {
+                enabled = true,
+              },
+              propertyDeclarationTypes = {
+                enabled = true,
+              },
+              parameterTypes = {
+                enabled = true,
+                suppressWhenArgumentMatchesName = true,
+              },
+              variableTypes = {
+                enabled = true,
+              },
+            },
+          },
+        },
+      }
+
+      local mason_packages = vim.fn.stdpath 'data' .. '/mason/packages'
+      local volar_path = mason_packages .. '/vue-language-server/node_modules/@vue/language-server'
+
+      lspconfig.ts_ls.setup {
+        -- NOTE: To enable hybridMode, change HybrideMode to true above and uncomment the following filetypes block.
+        -- WARN: THIS MAY CAUSE HIGHLIGHTING ISSUES WITHIN THE TEMPLATE SCOPE WHEN TSSERVER ATTACHES TO VUE FILES
+
+        -- filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue" },
+        init_options = {
+          plugins = {
+            {
+              name = '@vue/typescript-plugin',
+              location = volar_path,
+              languages = { 'vue' },
+            },
+          },
+        },
+        settings = {
+          typescript = {
+            inlayHints = {
+              includeInlayParameterNameHints = 'all',
+              includeInlayParameterNameHintsWhenArgumentMatchesName = true,
+              includeInlayFunctionParameterTypeHints = true,
+              includeInlayVariableTypeHints = true,
+              includeInlayVariableTypeHintsWhenTypeMatchesName = true,
+              includeInlayPropertyDeclarationTypeHints = true,
+              includeInlayFunctionLikeReturnTypeHints = true,
+              includeInlayEnumMemberValueHints = true,
+            },
+          },
+        },
+      }
+
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --
@@ -711,10 +824,6 @@ require('lazy').setup({
               -- diagnostics = { disable = { 'missing-fields' } },
             },
           },
-        },
-
-        volar = {
-          filetypes = { 'vue', 'typescript', 'javascript' },
         },
       }
 
