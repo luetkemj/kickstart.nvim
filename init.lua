@@ -707,6 +707,9 @@ require('lazy').setup({
       --   end,
       -- }
 
+      -- https://github.com/mason-org/mason-lspconfig.nvim/issues/371#issuecomment-2249935162
+      --https://www.reddit.com/r/neovim/comments/1g4e3sa/finally_neovim_native_vue_lsp_perfection_2024/
+
       lspconfig.volar.setup {
         -- NOTE: Uncomment to enable volar in file types other than vue.
         -- (Similar to Takeover Mode)
@@ -900,6 +903,17 @@ require('lazy').setup({
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
+
+        javascript = { 'prettier' },
+        typescript = { 'prettier' },
+        javascriptreact = { 'prettier' },
+        typescriptreact = { 'prettier' },
+        svelte = { 'prettier' },
+        css = { 'prettier' },
+        html = { 'prettier' },
+        json = { 'prettier' },
+        vue = { 'prettier' },
+        yaml = { 'prettier' },
       },
     },
   },
