@@ -291,73 +291,26 @@ require('lazy').setup({
     },
   },
 
+  {
+    'christoomey/vim-tmux-navigator',
+    cmd = {
+      'TmuxNavigateLeft',
+      'TmuxNavigateDown',
+      'TmuxNavigateUp',
+      'TmuxNavigateRight',
+      'TmuxNavigatePrevious',
+      'TmuxNavigatorProcessList',
+    },
+    keys = {
+      { '<c-h>', '<cmd><C-U>TmuxNavigateLeft<cr>' },
+      { '<c-j>', '<cmd><C-U>TmuxNavigateDown<cr>' },
+      { '<c-k>', '<cmd><C-U>TmuxNavigateUp<cr>' },
+      { '<c-l>', '<cmd><C-U>TmuxNavigateRight<cr>' },
+      { '<c-\\>', '<cmd><C-U>TmuxNavigatePrevious<cr>' },
+    },
+  },
+
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
-  --
-  -- This is often very useful to both group configuration, as well as handle
-  -- lazy loading plugins that don't need to be loaded immediately at startup.
-  --
-  -- For example, in the following configuration, we use:
-  --  event = 'VimEnter'
-  --
-  -- which loads which-key before all the UI elements are loaded. Events can be
-  -- normal autocommands events (`:help autocmd-events`).
-  --
-  -- Then, because we use the `opts` key (recommended), the configuration runs
-  -- after the plugin has been loaded as `require(MODULE).setup(opts)`.
-
-  -- { -- Useful plugin to show you pending keybinds.
-  --   'folke/which-key.nvim',
-  --   event = 'VimEnter', -- Sets the loading event to 'VimEnter'
-  --   opts = {
-  --     -- delay between pressing a key and opening which-key (milliseconds)
-  --     -- this setting is independent of vim.o.timeoutlen
-  --     delay = 0,
-  --     icons = {
-  --       -- set icon mappings to true if you have a Nerd Font
-  --       mappings = vim.g.have_nerd_font,
-  --       -- If you are using a Nerd Font: set icons.keys to an empty table which will use the
-  --       -- default which-key.nvim defined Nerd Font icons, otherwise define a string table
-  --       keys = vim.g.have_nerd_font and {} or {
-  --         Up = '<Up> ',
-  --         Down = '<Down> ',
-  --         Left = '<Left> ',
-  --         Right = '<Right> ',
-  --         C = '<C-…> ',
-  --         M = '<M-…> ',
-  --         D = '<D-…> ',
-  --         S = '<S-…> ',
-  --         CR = '<CR> ',
-  --         Esc = '<Esc> ',
-  --         ScrollWheelDown = '<ScrollWheelDown> ',
-  --         ScrollWheelUp = '<ScrollWheelUp> ',
-  --         NL = '<NL> ',
-  --         BS = '<BS> ',
-  --         Space = '<Space> ',
-  --         Tab = '<Tab> ',
-  --         F1 = '<F1>',
-  --         F2 = '<F2>',
-  --         F3 = '<F3>',
-  --         F4 = '<F4>',
-  --         F5 = '<F5>',
-  --         F6 = '<F6>',
-  --         F7 = '<F7>',
-  --         F8 = '<F8>',
-  --         F9 = '<F9>',
-  --         F10 = '<F10>',
-  --         F11 = '<F11>',
-  --         F12 = '<F12>',
-  --       },
-  --     },
-  --
-  --     -- Document existing key chains
-  --     spec = {
-  --       { '<leader>s', group = '[S]earch' },
-  --       { '<leader>t', group = '[T]oggle' },
-  --       { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
-  --     },
-  --   },
-  -- },
-
   -- NOTE: Plugins can specify dependencies.
   --
   -- The dependencies are proper plugin specifications as well - anything
@@ -686,29 +639,9 @@ require('lazy').setup({
         return ''
       end
 
-      -- lspconfig.vue_ls.setup {
-      --   cmd = { 'npx', '--no-install', '@vue/language-server', '--stdio' },
-      --   filetypes = { 'vue' },
-      --   root_dir = util.root_pattern 'package.json',
-      --   init_options = {
-      --     typescript = {
-      --       tsdk = '',
-      --     },
-      --     takeOverMode = true, -- optional
-      --   },
-      --   on_new_config = function(new_config, new_root_dir)
-      --     local tsdk = get_tsdk(new_root_dir)
-      --     if tsdk ~= '' then
-      --       new_config.init_options.typescript.tsdk = tsdk
-      --     else
-      --       vim.notify('[vue_ls] Warning: Could not find local TypeScript SDK in ' .. new_root_dir, vim.log.levels.WARN)
-      --       -- fallback behavior: leave tsdk empty or consider global fallback here if you want
-      --     end
-      --   end,
-      -- }
-
+      -- vue/typescript LSPs - this took forever to get sorted. These two threads helped.
       -- https://github.com/mason-org/mason-lspconfig.nvim/issues/371#issuecomment-2249935162
-      --https://www.reddit.com/r/neovim/comments/1g4e3sa/finally_neovim_native_vue_lsp_perfection_2024/
+      -- https://www.reddit.com/r/neovim/comments/1g4e3sa/finally_neovim_native_vue_lsp_perfection_2024/
 
       lspconfig.volar.setup {
         -- NOTE: Uncomment to enable volar in file types other than vue.
@@ -1041,6 +974,45 @@ require('lazy').setup({
 
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
+
+  {
+    'folke/trouble.nvim',
+    opts = {}, -- for default options, refer to the configuration section for custom setup.
+    cmd = 'Trouble',
+    keys = {
+      {
+        '<leader>xx',
+        '<cmd>Trouble diagnostics toggle<cr>',
+        desc = 'Diagnostics (Trouble)',
+      },
+      { '<leader>xt', '<cmd>Trouble todo toggle<CR>', desc = 'Open todos in trouble' },
+      {
+        '<leader>xX',
+        '<cmd>Trouble diagnostics toggle filter.buf=0<cr>',
+        desc = 'Buffer Diagnostics (Trouble)',
+      },
+      {
+        '<leader>cs',
+        '<cmd>Trouble symbols toggle focus=false<cr>',
+        desc = 'Symbols (Trouble)',
+      },
+      {
+        '<leader>cl',
+        '<cmd>Trouble lsp toggle focus=false win.position=right<cr>',
+        desc = 'LSP Definitions / references / ... (Trouble)',
+      },
+      {
+        '<leader>xL',
+        '<cmd>Trouble loclist toggle<cr>',
+        desc = 'Location List (Trouble)',
+      },
+      {
+        '<leader>xQ',
+        '<cmd>Trouble qflist toggle<cr>',
+        desc = 'Quickfix List (Trouble)',
+      },
+    },
+  },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
