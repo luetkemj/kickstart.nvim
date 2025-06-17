@@ -136,10 +136,13 @@ vim.o.showcmd = true
 vim.o.laststatus = 2
 
 -- Decrease update time
-vim.o.updatetime = 250
-
+vim.o.updatetime = 300
 -- Decrease mapped sequence wait time
-vim.o.timeoutlen = 300
+vim.o.timeoutlen = 400
+
+-- Performance options:
+vim.o.lazyredraw = true
+vim.o.ttyfast = true
 
 -- Configure how new splits should be opened
 vim.o.splitright = true
@@ -964,12 +967,21 @@ require('lazy').setup({
         -- By default, you may press `<c-space>` to show the documentation.
         -- Optionally, set `auto_show = true` to show the documentation after a delay.
         documentation = { auto_show = false, auto_show_delay_ms = 500 },
+        accept = { auto_brackets = { enabled = false } }, -- Can be slow
+        list = {
+          max_items = 50, -- Limit completion items
+        },
       },
 
       sources = {
+        per_filetype = {},
         default = { 'lsp', 'path', 'snippets', 'lazydev' },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
+          lsp = {
+            -- Limit LSP completion items
+            max_items = 50,
+          },
         },
       },
 
