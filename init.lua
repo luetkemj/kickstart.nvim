@@ -588,26 +588,34 @@ require('lazy').setup({
           --    See `:help CursorHold` for information about when this is executed
           --
           -- When you move your cursor, the highlights will be cleared (the second autocommand).
-          local client = vim.lsp.get_client_by_id(event.data.client_id)
           if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
             local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
+
+            -- Debounce the highlighting to reduce frequency
+            local highlight_timer = nil
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
               group = highlight_augroup,
-              callback = vim.lsp.buf.document_highlight,
+              callback = function()
+                if highlight_timer then
+                  vim.fn.timer_stop(highlight_timer)
+                end
+                highlight_timer = vim.fn.timer_start(100, function()
+                  vim.lsp.buf.document_highlight()
+                end)
+              end,
             })
 
+            -- Clear immediately on cursor move (this is fine)
             vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
               buffer = event.buf,
               group = highlight_augroup,
-              callback = vim.lsp.buf.clear_references,
-            })
-
-            vim.api.nvim_create_autocmd('LspDetach', {
-              group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
-              callback = function(event2)
+              callback = function()
+                if highlight_timer then
+                  vim.fn.timer_stop(highlight_timer)
+                  highlight_timer = nil
+                end
                 vim.lsp.buf.clear_references()
-                vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event2.buf }
               end,
             })
           end
