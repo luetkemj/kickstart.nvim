@@ -709,25 +709,17 @@ require('lazy').setup({
           --   tsdk = vim.fn.getcwd() .. "/node_modules/typescript/lib",
           -- },
         },
+        flags = {
+          debounce_text_changes = 150,
+        },
         settings = {
           typescript = {
             inlayHints = {
-              enumMemberValues = {
-                enabled = true,
-              },
-              functionLikeReturnTypes = {
-                enabled = true,
-              },
-              propertyDeclarationTypes = {
-                enabled = true,
-              },
-              parameterTypes = {
-                enabled = true,
-                suppressWhenArgumentMatchesName = true,
-              },
-              variableTypes = {
-                enabled = true,
-              },
+              enumMemberValues = { enabled = false }, -- enabled was true
+              functionLikeReturnTypes = { enabled = false }, -- enabled was true
+              propertyDeclarationTypes = { enabled = false }, -- enabled was true
+              parameterTypes = { enabled = false, suppressWhenArgumentMatchesName = true }, -- enabled was true
+              variableTypes = { enabled = false }, -- enabled was true
             },
           },
         },
@@ -749,18 +741,34 @@ require('lazy').setup({
               languages = { 'vue' },
             },
           },
+          -- Add these performance settings:
+          preferences = {
+            disableSuggestions = false,
+            quotePreference = 'auto',
+            includeCompletionsForModuleExports = true,
+            includeCompletionsForImportStatements = true,
+            includeCompletionsWithSnippetText = true,
+            includeAutomaticOptionalChainCompletions = true,
+          },
+          -- Reduce memory usage
+          maxTsServerMemory = 4096,
+        },
+        -- Add these flags for better performance
+        flags = {
+          debounce_text_changes = 150,
         },
         settings = {
           typescript = {
+            -- Reduce inlay hints for better performance
             inlayHints = {
-              includeInlayParameterNameHints = 'all',
-              includeInlayParameterNameHintsWhenArgumentMatchesName = true,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
-              includeInlayVariableTypeHintsWhenTypeMatchesName = true,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
+              includeInlayParameterNameHints = 'literal', -- was 'all'
+              includeInlayParameterNameHintsWhenArgumentMatchesName = false, -- was true
+              includeInlayFunctionParameterTypeHints = false, -- was true
+              includeInlayVariableTypeHints = false, -- was true
+              includeInlayVariableTypeHintsWhenTypeMatchesName = false,
+              includeInlayPropertyDeclarationTypeHints = false, -- was true
+              includeInlayFunctionLikeReturnTypeHints = false, -- was true
+              includeInlayEnumMemberValueHints = false, -- was true
             },
           },
         },
