@@ -136,10 +136,13 @@ vim.o.showcmd = true
 vim.o.laststatus = 2
 
 -- Decrease update time
-vim.o.updatetime = 250
-
+vim.o.updatetime = 300
 -- Decrease mapped sequence wait time
-vim.o.timeoutlen = 300
+vim.o.timeoutlen = 400
+
+-- Performance options:
+vim.o.lazyredraw = true
+vim.o.ttyfast = true
 
 -- Configure how new splits should be opened
 vim.o.splitright = true
@@ -157,7 +160,7 @@ vim.o.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
 -- Preview substitutions live, as you type!
-vim.o.inccommand = 'split'
+-- vim.o.inccommand = 'split'
 
 -- Show which line your cursor is on
 vim.o.cursorline = true
@@ -180,11 +183,14 @@ vim.o.confirm = true
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 vim.keymap.set('i', 'jk', '<esc>', { noremap = true, desc = 'exit to normal mode when in insert mode' })
-vim.keymap.set('n', '<leader>pv', '<CMD>Oil<CR>', { noremap = true, desc = 'go to oil (filetree)' })
-vim.keymap.set('n', '-', '<CMD>Oil<CR>', { noremap = true, desc = 'go to oil (filetree)' })
+
+vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
+vim.keymap.set('n', '<leader>pv', '<CMD>Oil<CR>', { noremap = true, desc = 'Open parent directory' })
+
 -- make :W do the same thing as :w
 vim.cmd 'command! -nargs=0 W w'
--- make :Q do the same thing as :w
+
+-- make :Q do the same thing as :q
 vim.cmd 'command! -nargs=0 Q q'
 
 -- Clear highlights on search when pressing <Esc> in normal mode
@@ -257,15 +263,22 @@ rtp:prepend(lazypath)
 --    :Lazy update
 --
 -- NOTE: Here is where you install your plugins.
-require('lazy').setup {
+require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
-
+  {
+    'lukas-reineke/indent-blankline.nvim',
+    main = 'ibl',
+    ---@module "ibl"
+    ---@type ibl.config
+    opts = {},
+  },
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
   -- keys can be used to configure plugin behavior/loading/etc.
   --
   -- Use `opts = {}` to automatically pass options to a plugin's `setup()` function, forcing the plugin to be loaded.
+  --
 
   -- Alternatively, use `config = function() ... end` for full control over the configuration.
   -- If you prefer to call `setup` explicitly, use:
@@ -294,7 +307,12 @@ require('lazy').setup {
       },
     },
   },
-
+  {
+    'norcalli/nvim-colorizer.lua',
+    opts = {
+      '*',
+    },
+  },
   {
     'christoomey/vim-tmux-navigator',
     cmd = {
@@ -313,24 +331,7 @@ require('lazy').setup {
       { '<c-\\>', '<cmd><C-U>TmuxNavigatePrevious<cr>' },
     },
   },
-  {
-    'stevearc/oil.nvim',
-    opts = {
-      view_options = {
-        show_hidden = true,
-      },
-    },
-    -- Optional dependencies
-    dependencies = { { 'echasnovski/mini.icons', opts = {} } },
-    -- dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
-    -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
-    lazy = false,
-  },
-  {
-    'davidmh/mdx.nvim',
-    config = true,
-    dependencies = { 'nvim-treesitter/nvim-treesitter' },
-  },
+
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   -- NOTE: Plugins can specify dependencies.
   --
@@ -449,7 +450,19 @@ require('lazy').setup {
       end, { desc = '[S]earch [N]eovim files' })
     end,
   },
-
+  {
+    'stevearc/oil.nvim',
+    opts = {
+      view_options = {
+        show_hidden = true,
+      },
+    },
+    -- Optional dependencies
+    dependencies = { { 'echasnovski/mini.icons', opts = {} } },
+    -- dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
+    -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
+    lazy = false,
+  },
   -- LSP Plugins
   {
     -- `lazydev` configures Lua LSP for your Neovim config, runtime and plugins
@@ -545,7 +558,7 @@ require('lazy').setup {
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header.
-          map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+          map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
           -- Fuzzy find all the symbols in your current document.
           --  Symbols are things like variables, functions, types, etc.
@@ -558,7 +571,7 @@ require('lazy').setup {
           -- Jump to the type of the word under your cursor.
           --  Useful when you're not sure what type a variable is and you want to see
           --  the definition of its *type*, not where it was *defined*.
-          map('grt', require('telescope.builtin').lsp_type_definitions, '[G]oto [T]ype Definition')
+          map('gt', require('telescope.builtin').lsp_type_definitions, '[G]oto [T]ype Definition')
 
           -- This function resolves a difference between neovim nightly (version 0.11) and stable (version 0.10)
           ---@param client vim.lsp.Client
@@ -581,23 +594,32 @@ require('lazy').setup {
           local client = vim.lsp.get_client_by_id(event.data.client_id)
           if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
             local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
+
+            -- Debounce the highlighting to reduce frequency
+            local highlight_timer = nil
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
               group = highlight_augroup,
-              callback = vim.lsp.buf.document_highlight,
+              callback = function()
+                if highlight_timer then
+                  vim.fn.timer_stop(highlight_timer)
+                end
+                highlight_timer = vim.fn.timer_start(100, function()
+                  vim.lsp.buf.document_highlight()
+                end)
+              end,
             })
 
+            -- Clear immediately on cursor move (this is fine)
             vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
               buffer = event.buf,
               group = highlight_augroup,
-              callback = vim.lsp.buf.clear_references,
-            })
-
-            vim.api.nvim_create_autocmd('LspDetach', {
-              group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
-              callback = function(event2)
+              callback = function()
+                if highlight_timer then
+                  vim.fn.timer_stop(highlight_timer)
+                  highlight_timer = nil
+                end
                 vim.lsp.buf.clear_references()
-                vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event2.buf }
               end,
             })
           end
@@ -617,6 +639,8 @@ require('lazy').setup {
       -- Diagnostic Config
       -- See :help vim.diagnostic.Opts
       vim.diagnostic.config {
+        -- Reduce diagnostic update frequency
+        update_in_insert = false, -- Don't update diagnostics in insert mode
         severity_sort = true,
         float = { border = 'rounded', source = 'if_many' },
         underline = { severity = vim.diagnostic.severity.ERROR },
@@ -631,15 +655,12 @@ require('lazy').setup {
         virtual_text = {
           source = 'if_many',
           spacing = 2,
+          -- Simplify the format function
           format = function(diagnostic)
-            local diagnostic_message = {
-              [vim.diagnostic.severity.ERROR] = diagnostic.message,
-              [vim.diagnostic.severity.WARN] = diagnostic.message,
-              [vim.diagnostic.severity.INFO] = diagnostic.message,
-              [vim.diagnostic.severity.HINT] = diagnostic.message,
-            }
-            return diagnostic_message[diagnostic.severity]
+            return diagnostic.message
           end,
+          -- Only show errors and warnings in virtual text
+          severity = { min = vim.diagnostic.severity.WARN },
         },
       }
 
@@ -688,25 +709,17 @@ require('lazy').setup {
           --   tsdk = vim.fn.getcwd() .. "/node_modules/typescript/lib",
           -- },
         },
+        flags = {
+          debounce_text_changes = 150,
+        },
         settings = {
           typescript = {
             inlayHints = {
-              enumMemberValues = {
-                enabled = true,
-              },
-              functionLikeReturnTypes = {
-                enabled = true,
-              },
-              propertyDeclarationTypes = {
-                enabled = true,
-              },
-              parameterTypes = {
-                enabled = true,
-                suppressWhenArgumentMatchesName = true,
-              },
-              variableTypes = {
-                enabled = true,
-              },
+              enumMemberValues = { enabled = false }, -- enabled was true
+              functionLikeReturnTypes = { enabled = false }, -- enabled was true
+              propertyDeclarationTypes = { enabled = false }, -- enabled was true
+              parameterTypes = { enabled = false, suppressWhenArgumentMatchesName = true }, -- enabled was true
+              variableTypes = { enabled = false }, -- enabled was true
             },
           },
         },
@@ -728,18 +741,34 @@ require('lazy').setup {
               languages = { 'vue' },
             },
           },
+          -- Add these performance settings:
+          preferences = {
+            disableSuggestions = false,
+            quotePreference = 'auto',
+            includeCompletionsForModuleExports = true,
+            includeCompletionsForImportStatements = true,
+            includeCompletionsWithSnippetText = true,
+            includeAutomaticOptionalChainCompletions = true,
+          },
+          -- Reduce memory usage
+          maxTsServerMemory = 4096,
+        },
+        -- Add these flags for better performance
+        flags = {
+          debounce_text_changes = 150,
         },
         settings = {
           typescript = {
+            -- Reduce inlay hints for better performance
             inlayHints = {
-              includeInlayParameterNameHints = 'all',
-              includeInlayParameterNameHintsWhenArgumentMatchesName = true,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
-              includeInlayVariableTypeHintsWhenTypeMatchesName = true,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
+              includeInlayParameterNameHints = 'literal', -- was 'all'
+              includeInlayParameterNameHintsWhenArgumentMatchesName = false, -- was true
+              includeInlayFunctionParameterTypeHints = false, -- was true
+              includeInlayVariableTypeHints = false, -- was true
+              includeInlayVariableTypeHintsWhenTypeMatchesName = false,
+              includeInlayPropertyDeclarationTypeHints = false, -- was true
+              includeInlayFunctionLikeReturnTypeHints = false, -- was true
+              includeInlayEnumMemberValueHints = false, -- was true
             },
           },
         },
@@ -819,95 +848,7 @@ require('lazy').setup {
       }
     end,
   },
-  {
-    'coder/claudecode.nvim',
-    dependencies = { 'folke/snacks.nvim' },
-    config = function()
-      require('claudecode').setup {}
 
-      -- Create a more aggressive autocmd that handles ClaudeCode buffers
-      vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWinEnter', 'TermOpen' }, {
-        pattern = '*',
-        callback = function(ev)
-          local bufname = vim.fn.bufname(ev.buf)
-          local filetype = vim.bo[ev.buf].filetype
-          local buftype = vim.bo[ev.buf].buftype
-
-          -- Debug: uncomment these lines to see what buffer you're in
-          -- print("Buffer name: " .. bufname)
-          -- print("Filetype: " .. filetype)
-          -- print("Buftype: " .. buftype)
-
-          -- Check various ways ClaudeCode might name its buffers
-          if string.match(bufname:lower(), 'claude') or filetype == 'claudecode' or buftype == 'terminal' and string.match(bufname, 'claude') then
-            -- Use a timer to ensure the mappings are set after ClaudeCode loads
-            vim.defer_fn(function()
-              local opts = { buffer = ev.buf, silent = true, nowait = true }
-
-              -- Set mappings for ALL modes
-              for _, mode in ipairs { 'n', 'i', 't', 'v' } do
-                vim.keymap.set(mode, '<C-h>', function()
-                  vim.cmd 'TmuxNavigateLeft'
-                end, opts)
-                vim.keymap.set(mode, '<C-j>', function()
-                  vim.cmd 'TmuxNavigateDown'
-                end, opts)
-                vim.keymap.set(mode, '<C-k>', function()
-                  vim.cmd 'TmuxNavigateUp'
-                end, opts)
-                vim.keymap.set(mode, '<C-l>', function()
-                  vim.cmd 'TmuxNavigateRight'
-                end, opts)
-              end
-            end, 100) -- 100ms delay
-          end
-        end,
-      })
-    end,
-    keys = {
-      { '<leader>a', nil, desc = 'AI/Claude Code' },
-      { '<leader>ac', '<cmd>ClaudeCode<cr>', desc = 'Toggle Claude' },
-      { '<leader>af', '<cmd>ClaudeCodeFocus<cr>', desc = 'Focus Claude' },
-      { '<leader>ar', '<cmd>ClaudeCode --resume<cr>', desc = 'Resume Claude' },
-      { '<leader>aC', '<cmd>ClaudeCode --continue<cr>', desc = 'Continue Claude' },
-      { '<leader>am', '<cmd>ClaudeCodeSelectModel<cr>', desc = 'Select Claude model' },
-      { '<leader>ab', '<cmd>ClaudeCodeAdd %<cr>', desc = 'Add current buffer' },
-      { '<leader>as', '<cmd>ClaudeCodeSend<cr>', mode = 'v', desc = 'Send to Claude' },
-      {
-        '<leader>as',
-        '<cmd>ClaudeCodeTreeAdd<cr>',
-        desc = 'Add file',
-        ft = { 'NvimTree', 'neo-tree', 'oil', 'minifiles' },
-      },
-      -- Diff management
-      { '<leader>aa', '<cmd>ClaudeCodeDiffAccept<cr>', desc = 'Accept diff' },
-      { '<leader>ad', '<cmd>ClaudeCodeDiffDeny<cr>', desc = 'Deny diff' },
-    },
-  },
-  -- {
-  --   'coder/claudecode.nvim',
-  --   dependencies = { 'folke/snacks.nvim' },
-  --   config = true,
-  --   keys = {
-  --     { '<leader>a', nil, desc = 'AI/Claude Code' },
-  --     { '<leader>ac', '<cmd>ClaudeCode<cr>', desc = 'Toggle Claude' },
-  --     { '<leader>af', '<cmd>ClaudeCodeFocus<cr>', desc = 'Focus Claude' },
-  --     { '<leader>ar', '<cmd>ClaudeCode --resume<cr>', desc = 'Resume Claude' },
-  --     { '<leader>aC', '<cmd>ClaudeCode --continue<cr>', desc = 'Continue Claude' },
-  --     { '<leader>am', '<cmd>ClaudeCodeSelectModel<cr>', desc = 'Select Claude model' },
-  --     { '<leader>ab', '<cmd>ClaudeCodeAdd %<cr>', desc = 'Add current buffer' },
-  --     { '<leader>as', '<cmd>ClaudeCodeSend<cr>', mode = 'v', desc = 'Send to Claude' },
-  --     {
-  --       '<leader>as',
-  --       '<cmd>ClaudeCodeTreeAdd<cr>',
-  --       desc = 'Add file',
-  --       ft = { 'NvimTree', 'neo-tree', 'oil', 'minifiles' },
-  --     },
-  --     -- Diff management
-  --     { '<leader>aa', '<cmd>ClaudeCodeDiffAccept<cr>', desc = 'Accept diff' },
-  --     { '<leader>ad', '<cmd>ClaudeCodeDiffDeny<cr>', desc = 'Deny diff' },
-  --   },
-  -- },
   { -- Autoformat
     'stevearc/conform.nvim',
     event = { 'BufWritePre' },
@@ -952,12 +893,10 @@ require('lazy').setup {
         typescriptreact = { 'prettier' },
         svelte = { 'prettier' },
         css = { 'prettier' },
-        scss = { 'prettier' },
         html = { 'prettier' },
         json = { 'prettier' },
         vue = { 'prettier' },
         yaml = { 'prettier' },
-        svg = { 'prettier' },
       },
     },
   },
@@ -1036,12 +975,21 @@ require('lazy').setup {
         -- By default, you may press `<c-space>` to show the documentation.
         -- Optionally, set `auto_show = true` to show the documentation after a delay.
         documentation = { auto_show = false, auto_show_delay_ms = 500 },
+        accept = { auto_brackets = { enabled = false } }, -- Can be slow
+        list = {
+          max_items = 50, -- Limit completion items
+        },
       },
 
       sources = {
+        per_filetype = {},
         default = { 'lsp', 'path', 'snippets', 'lazydev' },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
+          lsp = {
+            -- Limit LSP completion items
+            max_items = 50,
+          },
         },
       },
 
@@ -1074,10 +1022,6 @@ require('lazy').setup {
         styles = {
           comments = { italic = false }, -- Disable italics in comments
         },
-        -- -- Change the "hint" color to the "orange" color, and make the "error" color bright red
-        -- on_colors = function(colors)
-        --   colors.bg = 'NONE'
-        -- end,
       }
 
       -- Load the colorscheme here.
@@ -1239,12 +1183,7 @@ require('lazy').setup {
   -- Or use telescope!
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
-  {
-    'lukas-reineke/indent-blankline.nvim',
-    main = 'ibl',
-    opts = {},
-  },
-
+}, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
     -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table
@@ -1264,7 +1203,7 @@ require('lazy').setup {
       lazy = '💤 ',
     },
   },
-}
+})
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
